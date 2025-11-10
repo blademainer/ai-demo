@@ -1,0 +1,353 @@
+---
+description: dir: /llm-translate/**/
+globs: /llm-translate/**/*
+alwaysApply: false
+---
+
+# LLM Translation Project Rules
+
+## Project Overview
+
+This project implements a Chinese-English neural machine translation system based on the Transformer architecture from the paper "Attention Is All You Need" (Vaswani et al., 2017).
+
+## Key Design Document
+
+The complete system design is documented in [DESIGN_DOCUMENT.md](mdc:llm-translate/DESIGN_DOCUMENT.md), which contains:
+- Transformer architecture specifications
+- Data processing pipelines
+- Training strategies
+- Inference optimization techniques
+- Evaluation metrics and benchmarks
+
+## Project Structure
+
+```
+llm-translate/
+├── DESIGN_DOCUMENT.md          # Complete technical design specification
+├── requirements.txt            # Python dependencies
+├── configs/                    # Configuration files
+│   ├── model_config.yaml      # Model architecture config
+│   ├── training_config.yaml   # Training hyperparameters
+│   └── inference_config.yaml  # Inference settings
+├── data/                      # Data storage
+│   ├── raw/                   # Raw parallel corpus
+│   ├── processed/             # Preprocessed data
+│   └── vocab/                 # Vocabulary files
+├── src/                       # Source code
+│   ├── model/                 # Transformer implementation
+│   ├── data/                  # Data processing
+│   ├── training/              # Training logic
+│   ├── inference/             # Translation inference
+│   ├── evaluation/            # Evaluation metrics
+│   └── utils/                 # Utilities
+├── scripts/                   # Executable scripts
+├── notebooks/                 # Jupyter notebooks
+├── tests/                     # Unit tests
+├── checkpoints/               # Model checkpoints
+├── logs/                      # Training logs
+└── outputs/                   # Translation outputs
+```
+
+## Architecture Specifications
+
+### Model Configuration
+- **Architecture**: Transformer (Encoder-Decoder)
+- **Layers**: 6 encoder layers, 6 decoder layers
+- **Model Dimension**: 512 (d_model)
+- **Attention Heads**: 8 heads
+- **FFN Hidden Size**: 2048
+- **Max Sequence Length**: 512 tokens
+- **Dropout**: 0.1
+
+### Vocabulary
+- **Tokenizer**: SentencePiece BPE
+- **Vocab Size**: 32,000 (both Chinese and English)
+- **Special Tokens**: `<s>`, `</s>`, `<pad>`, `<unk>`
+
+## Coding Standards
+
+### Python Code Style
+- **Framework**: PyTorch 2.0+
+- **Python Version**: 3.8+
+- **Code Style**: PEP 8 compliant
+- **Type Hints**: Use type hints for function signatures
+- **Docstrings**: Google-style docstrings for all classes and functions
+
+### Naming Conventions
+- **Classes**: PascalCase (e.g., `TransformerModel`, `MultiHeadAttention`)
+- **Functions**: snake_case (e.g., `create_padding_mask`, `compute_loss`)
+- **Constants**: UPPER_SNAKE_CASE (e.g., `MAX_SEQ_LENGTH`, `VOCAB_SIZE`)
+- **Config Files**: lowercase with underscores (e.g., `model_config.yaml`)
+
+### Module Organization
+
+#### Model Modules (`src/model/`)
+- `transformer.py`: Main Transformer model
+- `encoder.py`: Encoder stack implementation
+- `decoder.py`: Decoder stack implementation
+- `attention.py`: Multi-Head Attention mechanisms
+- `embedding.py`: Token and positional embeddings
+- `positional_encoding.py`: Sinusoidal positional encoding
+- `layers.py`: Reusable layer components (FFN, LayerNorm)
+
+#### Data Modules (`src/data/`)
+- `dataset.py`: PyTorch Dataset classes
+- `tokenizer.py`: SentencePiece tokenizer wrapper
+- `preprocessor.py`: Text preprocessing utilities
+- `augmentation.py`: Data augmentation strategies
+
+#### Training Modules (`src/training/`)
+- `trainer.py`: Main training loop
+- `optimizer.py`: Optimizer configuration
+- `scheduler.py`: Learning rate scheduling
+- `loss.py`: Loss functions with label smoothing
+
+#### Inference Modules (`src/inference/`)
+- `translator.py`: Translation interface
+- `beam_search.py`: Beam search decoder
+- `postprocessor.py`: Output post-processing
+
+## Key Implementation Guidelines
+
+### Attention Mechanism
+```python
+# Scaled Dot-Product Attention formula
+# Attention(Q, K, V) = softmax(QK^T / √d_k) V
+
+# Always apply:
+# 1. Scaling by √d_k to prevent softmax saturation
+# 2. Masking for padding and future positions
+# 3. Dropout on attention weights
+```
+
+### Positional Encoding
+```python
+# Use sinusoidal positional encoding
+# PE(pos, 2i) = sin(pos / 10000^(2i/d_model))
+# PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))
+
+# Add to embeddings, don't concatenate
+# Scale embeddings by √d_model before adding PE
+```
+
+### Training Best Practices
+
+1. **Initialization**: Use Xavier/Glorot uniform initialization for all weights with dim > 1
+2. **Learning Rate Schedule**: Warmup (4000 steps) + Inverse Square Root decay
+3. **Loss Function**: Cross-Entropy with label smoothing (ε=0.1)
+4. **Gradient Clipping**: Max gradient norm = 1.0
+5. **Mixed Precision**: Use PyTorch AMP for faster training
+6. **Checkpointing**: Save model every 5000 steps, keep best 5 checkpoints
+
+### Masking Strategy
+
+```python
+# Three types of masks:
+# 1. Padding Mask: Hide padding tokens (apply to encoder & decoder)
+# 2. Look-Ahead Mask: Prevent attending to future tokens (decoder only)
+# 3. Combined Mask: Padding + Look-Ahead for decoder self-attention
+```
+
+### Configuration Management
+- All hyperparameters must be defined in YAML config files
+- Use `configs/` directory for different experiment configurations
+- Config files should be version controlled
+- Support config inheritance and overrides
+
+## Data Processing Rules
+
+### Preprocessing Pipeline
+1. HTML tag removal and special character cleaning
+2. Punctuation normalization (CN/EN punctuation conversion)
+3. Length filtering (5 ≤ length ≤ 512 tokens)
+4. Deduplication of sentence pairs
+5. Language detection validation
+6. Quality filtering based on alignment scores
+
+### Tokenization
+- Train separate SentencePiece models for Chinese and English
+- Use BPE algorithm with 32K merge operations
+- Character coverage: 0.9995
+- Enable byte fallback for rare characters
+- Apply normalization: `nmt_nfkc`
+
+### Data Augmentation (Optional)
+- Back-translation for semi-supervised learning
+- Synonym replacement (preserve semantics)
+- Noise injection (word dropout, swap)
+
+## Evaluation Standards
+
+### Automatic Metrics
+- **Primary**: BLEU-4 (target: > 30.0)
+- **Secondary**: METEOR, ChrF, TER
+- **Neural**: COMET score
+
+### Evaluation Protocol
+1. Use `sacrebleu` for BLEU calculation (reproducibility)
+2. Report tokenized and detokenized BLEU
+3. Test on multiple domains (news, general, technical)
+4. Case-sensitive evaluation for proper nouns
+
+## Performance Requirements
+
+### Training Performance
+- Training speed: > 5000 tokens/sec (single V100 GPU)
+- Memory usage: < 16GB GPU memory (batch_size=64)
+- Convergence: Within 50 epochs on WMT dataset
+
+### Inference Performance
+- Latency: < 100ms per sentence (single GPU, batch_size=1)
+- Throughput: > 50 sentences/sec (batch inference)
+- Model size: ~200MB (FP32), ~100MB (FP16)
+
+## Testing Requirements
+
+### Unit Tests
+- Test all attention mechanisms with known inputs/outputs
+- Verify mask generation (padding, look-ahead, combined)
+- Test positional encoding shape and values
+- Validate tokenizer encode/decode consistency
+
+### Integration Tests
+- End-to-end translation pipeline
+- Checkpoint save/load functionality
+- Multi-GPU training (if applicable)
+- ONNX export compatibility
+
+### Quality Tests
+- Overfit single batch test (verify model capacity)
+- Translation quality on validation set
+- Attention visualization sanity checks
+
+## Development Workflow
+
+### Phase 1: Core Implementation (2-3 weeks)
+- Implement Transformer components (attention, encoder, decoder)
+- Write unit tests for each module
+- Verify forward/backward pass correctness
+
+### Phase 2: Data Pipeline (1-2 weeks)
+- Download and preprocess datasets
+- Train SentencePiece tokenizers
+- Implement efficient data loaders
+- Add data augmentation
+
+### Phase 3: Training System (2-3 weeks)
+- Implement training loop with mixed precision
+- Add TensorBoard logging and monitoring
+- Implement checkpoint management
+- Support distributed training (optional)
+
+### Phase 4: Model Training (4-6 weeks)
+- Run hyperparameter search experiments
+- Train full model on complete dataset
+- Monitor convergence and quality metrics
+- Select best checkpoint
+
+### Phase 5: Evaluation & Optimization (1-2 weeks)
+- Comprehensive evaluation on test sets
+- Error analysis and debugging
+- Model quantization and optimization
+- Inference speed optimization
+
+### Phase 6: Deployment (2-3 weeks)
+- Export to ONNX/TorchScript
+- Build inference API
+- Performance testing and profiling
+- Documentation
+
+## Monitoring and Debugging
+
+### Key Metrics to Track
+- Training/validation loss curves
+- Learning rate changes
+- Gradient norms (detect gradient explosion/vanishing)
+- BLEU score progression
+- Attention weight distributions
+- Memory usage and training speed
+
+### TensorBoard Logging
+- Log loss every 100 steps
+- Log BLEU score every 1000 steps
+- Visualize attention weights (sample translations)
+- Log gradient histograms
+- Track learning rate schedule
+
+### Debugging Checklist
+- [ ] Overfit single batch (verify implementation)
+- [ ] Check attention mask correctness
+- [ ] Verify positional encoding values
+- [ ] Monitor gradient norms
+- [ ] Validate tokenization (encode → decode)
+- [ ] Check for NaN/Inf in losses
+- [ ] Visualize attention patterns
+
+## Dependencies
+
+### Core Dependencies
+```
+torch>=2.0.0
+sentencepiece>=0.1.99
+numpy>=1.21.0
+pandas>=1.3.0
+pyyaml>=6.0
+tensorboard>=2.10.0
+sacrebleu>=2.0.0
+```
+
+### Optional Dependencies
+```
+onnx>=1.12.0
+onnxruntime>=1.12.0
+transformers>=4.20.0  # For comparison
+matplotlib>=3.5.0
+jupyter>=1.0.0
+```
+
+## Common Issues and Solutions
+
+### Issue: Out of Memory (OOM)
+**Solutions**:
+- Reduce batch size or max sequence length
+- Enable gradient checkpointing
+- Use gradient accumulation
+- Apply mixed precision training (FP16)
+
+### Issue: Training Instability
+**Solutions**:
+- Check learning rate (may be too high)
+- Verify gradient clipping is enabled
+- Use label smoothing (ε=0.1)
+- Check for NaN in attention weights
+
+### Issue: Poor Translation Quality
+**Solutions**:
+- Increase model size (layers, d_model)
+- Use more training data
+- Apply data augmentation
+- Tune beam search hyperparameters
+- Check tokenizer quality
+
+### Issue: Slow Training
+**Solutions**:
+- Enable mixed precision (AMP)
+- Optimize data loading (num_workers, pin_memory)
+- Use efficient attention implementations
+- Profile code to find bottlenecks
+
+## Reference Resources
+
+- **Design Document**: [DESIGN_DOCUMENT.md](mdc:llm-translate/DESIGN_DOCUMENT.md)
+- **Paper**: Attention Is All You Need (arXiv:1706.03762)
+- **Implementation Reference**: The Annotated Transformer
+- **Datasets**: WMT Translation Tasks, UN Corpus, News Commentary
+
+## Notes
+
+- Always refer to the design document for detailed architecture specifications
+- Follow PyTorch best practices for model implementation
+- Use configuration files for all hyperparameters
+- Maintain comprehensive logging for reproducibility
+- Write tests for critical components before training
+- Document any deviations from the original Transformer paper

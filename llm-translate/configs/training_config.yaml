@@ -1,0 +1,74 @@
+# 训练配置
+# 基于Transformer论文的训练策略
+
+training:
+  # 基本设置
+  num_epochs: 50              # 训练轮数
+  batch_size: 64              # 批大小
+  gradient_accumulation_steps: 2  # 梯度累积步数
+  
+  # 优化器
+  optimizer:
+    type: "Adam"
+    beta1: 0.9
+    beta2: 0.98
+    epsilon: 1.0e-9
+    weight_decay: 0.0001
+  
+  # 学习率调度
+  scheduler:
+    type: "NoamLR"           # Noam学习率调度
+    warmup_steps: 4000       # 预热步数
+    d_model: 512             # 模型维度
+    factor: 1.0              # 缩放因子
+  
+  # 损失函数
+  loss:
+    type: "LabelSmoothingCrossEntropy"
+    smoothing: 0.1           # 标签平滑参数
+    ignore_index: 0          # 忽略的索引(padding)
+  
+  # 梯度处理
+  max_grad_norm: 1.0         # 梯度裁剪阈值
+  
+  # 混合精度训练
+  fp16: true                 # 是否使用混合精度
+  
+  # 检查点和日志
+  checkpoint_dir: "./checkpoints"
+  log_dir: "./logs"
+  save_interval: 5000        # 保存间隔(步数)
+  eval_interval: 1000        # 验证间隔(步数)
+  log_interval: 100          # 日志间隔(步数)
+  
+  # 早停
+  early_stopping_patience: 5  # 早停耐心值(epochs)
+
+# 数据配置
+data:
+  # 数据路径
+  train_src: "./data/processed/train.zh"
+  train_tgt: "./data/processed/train.en"
+  val_src: "./data/processed/val.zh"
+  val_tgt: "./data/processed/val.en"
+  test_src: "./data/processed/test.zh"
+  test_tgt: "./data/processed/test.en"
+  
+  # 分词器路径
+  src_tokenizer_path: "./data/vocab/spm_zh.model"
+  tgt_tokenizer_path: "./data/vocab/spm_en.model"
+  
+  # 数据加载
+  num_workers: 8             # 数据加载线程数
+  pin_memory: true           # 固定内存
+  prefetch_factor: 2         # 预取因子
+  
+  # 数据预处理
+  min_length: 5              # 最小句子长度
+  max_length: 512            # 最大句子长度
+
+# 设备配置
+device:
+  use_cuda: true             # 是否使用CUDA
+  device_ids: [0]            # GPU设备ID列表
+  distributed: false         # 是否使用分布式训练

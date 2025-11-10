@@ -1,0 +1,41 @@
+# Transformer模型配置
+# 基于《Attention Is All You Need》论文的标准配置
+
+model:
+  # 词汇表大小
+  src_vocab_size: 32000  # 源语言(中文)词汇表大小
+  tgt_vocab_size: 32000  # 目标语言(英文)词汇表大小
+  
+  # 模型维度
+  d_model: 512           # 模型维度
+  num_heads: 8           # 多头注意力头数
+  num_encoder_layers: 6  # 编码器层数
+  num_decoder_layers: 6  # 解码器层数
+  d_ff: 2048             # 前馈网络隐藏层维度
+  
+  # 序列长度
+  max_seq_length: 512    # 最大序列长度
+  
+  # 正则化
+  dropout: 0.1           # Dropout比率
+  
+  # 特殊token
+  pad_idx: 0             # 填充token索引
+  bos_idx: 1             # 句子开始token索引
+  eos_idx: 2             # 句子结束token索引
+  unk_idx: 3             # 未知token索引
+
+# 分词器配置
+tokenizer:
+  model_type: "BPE"              # 分词模型类型
+  vocab_size: 32000              # 词汇表大小
+  character_coverage: 0.9995     # 字符覆盖率
+  normalization_rule: "nmt_nfkc" # 标准化规则
+  split_by_whitespace: true      # 是否按空格分割
+  byte_fallback: true            # 字节回退
+  
+  # 特殊token
+  unk_piece: "<unk>"
+  bos_piece: "<s>"
+  eos_piece: "</s>"
+  pad_piece: "<pad>"
